@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string.h>
 #include <variant>
+#include <vector>
 
 // SPEC - https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
 
@@ -112,6 +113,53 @@ enum class ElfOsABI
     ELFOSABI_STANDALONE = 255 // Standalone (embedded) application
 };
 
+enum class ProgramHeaderType
+{
+    PT_NULL = 0,    // Unused entry
+    PT_LOAD = 1,    // Loadable segment
+    PT_DYNAMIC = 2, // Dynamic linking information
+    PT_INTERP = 3,  // Interpreter pathname
+    PT_NOTE = 4,    // Auxiliary information
+    PT_SHLIB = 5,   // Reserved
+    PT_PHDR = 6,    // The program header table itself
+    PT_TLS = 7,     // The thread-local storage template
+    PT_OS = 8,      // operating system-specific pt entry type
+    PT_OROC = 9,    // processor-specific program hdr entry type
+};
+
+typedef struct
+{
+  bool executable : 1;
+  bool writable : 1;
+  bool readable : 1;
+} ProgramHeaderFlags;
+
+// 32bit ELF program header
+typedef struct
+{
+    Elf_word p_type;   // Type of segment
+    Elf32_off p_offset; // Offset in file
+    Elf32_addr p_vaddr; // Virtual address in memory
+    Elf32_addr p_paddr; // Reserved
+    Elf_word p_filesz;  // Size of segment in file
+    Elf_word p_memsz;   // Size of segment in memory
+    Elf_word p_flags;   // Segment attributes
+    Elf_word p_align;   // Alignment of segment
+} Elf32_Phdr;
+
+// 64bit ELF program header
+typedef struct
+{
+    Elf_word p_type;   // Type of segment
+    Elf32_off p_flags; // Segment attributes
+    Elf64_off p_offset; // Offset in file
+    Elf64_addr p_vaddr; // Virtual address in memory
+    Elf64_addr p_paddr; // Reserved
+    Elf64_off p_filesz;  // Size of segment in file
+    Elf64_off p_memsz;   // Size of segment in memory
+    Elf64_off p_align;   // Alignment of segment
+} Elf64_Phdr;
+
 class ElfHandler
 {
   public:
@@ -121,6 +169,7 @@ class ElfHandler
   private:
     // Private Data Members
     std::variant<Elf32_Ehdr, Elf64_Ehdr> _elf_ehdr;
+    std::vector<std::variant<Elf32_Phdr, Elf64_Phdr>> _elf_phdrs;
     ElfType _elf_type;
     ElfDataEncoding _elf_data_encoding;
     uint8_t _elf_ev_current = 0;
@@ -129,6 +178,7 @@ class ElfHandler
     // Private Helper Methods
     void ReadFile(const std::string &fileName);
     template <typename T> void ReadElfHeader(std::ifstream &file);
+    template <typename T> void ReadElfProgramHeaders(std::ifstream &file);
     ElfOsABI MapToElfOsABI(uint16_t value);
 
     // Private Validation Methods
@@ -140,4 +190,7 @@ class ElfHandler
     void ValidateABIVersion(const std::array<uint8_t, EI_NIDENT> &ident);
     void ValidatePAD(const std::array<uint8_t, EI_NIDENT> &ident);
     void ValidateIdent(const std::array<uint8_t, EI_NIDENT> &ident);
+    void ValidateElfProgramHeaders(std::ifstream &file);
+    ProgramHeaderType ValidateElfProgramHeaderType(uint32_t value);
+    ProgramHeaderFlags ValidateElfProgramHeaderFlags(uint32_t value);
 };

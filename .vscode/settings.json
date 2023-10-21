@@ -77,7 +77,11 @@
     "cinttypes": "cpp",
     "typeinfo": "cpp",
     "valarray": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "any": "cpp",
+    "complex": "cpp",
+    "csignal": "cpp",
+    "typeindex": "cpp"
   },
   "C_Cpp_Runner.cCompilerPath": "gcc",
   "C_Cpp_Runner.cppCompilerPath": "g++",

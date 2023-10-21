@@ -12,6 +12,14 @@ void Helper::LogError(int errorCode, const char *errorMessage, ...)
     exit(errorCode);
 }
 
+void Helper::LogInfo(const char *infoMessage, ...)
+{
+    va_list args;
+    va_start(args, infoMessage);
+    vfprintf(stdout, infoMessage, args);
+    va_end(args);
+}
+
 std::string Helper::toByteEncoded(const uint8_t *data, size_t length)
 {
     static const char *hexChars = "0123456789ABCDEF";

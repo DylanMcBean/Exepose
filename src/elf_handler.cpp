@@ -29,6 +29,7 @@ void ElfHandler::ReadFile(const std::string &fileName)
     ValidateABIVersion(ident);
     ValidatePAD(ident);
     ValidateIdent(ident);
+    ValidateElfProgramHeaders(file);
 }
 
 void ElfHandler::ValidateElfMagic(const std::array<uint8_t, EI_NIDENT> &ident)
@@ -169,4 +170,78 @@ void ElfHandler::ValidatePAD(const std::array<uint8_t, EI_NIDENT> &ident)
 void ElfHandler::ValidateIdent(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     // TODO: Implement
+}
+
+void ElfHandler::ValidateElfProgramHeaders(std::ifstream &file)
+{
+    switch (_elf_type)
+    {
+    case ElfType::ELF_32:
+        ReadElfProgramHeaders<Elf32_Phdr>(file);
+        break;
+    case ElfType::ELF_64:
+        ReadElfProgramHeaders<Elf64_Phdr>(file);
+        break;
+    default:
+        throw std::runtime_error("Invalid ELF type");
+    }
+}
+
+template <typename Elf_Phdr_Type> void ElfHandler::ReadElfProgramHeaders(std::ifstream &file)
+{
+    uint64_t phoff = 0;
+    uint64_t phnum = 0;
+    switch (_elf_type)
+    {
+    case ElfType::ELF_32:
+        phoff = std::get<Elf32_Ehdr>(_elf_ehdr).e_phoff;
+        phnum = std::get<Elf32_Ehdr>(_elf_ehdr).e_phnum;
+        break;
+    case ElfType::ELF_64:
+        phoff = std::get<Elf64_Ehdr>(_elf_ehdr).e_phoff;
+        phnum = std::get<Elf64_Ehdr>(_elf_ehdr).e_phnum;
+        break;
+    default:
+        throw std::runtime_error("Invalid ELF type");
+    }
+    file.seekg(phoff);
+    for (size_t i = 0; i < phnum; ++i)
+    {
+        Elf_Phdr_Type phdr{};
+        file.read(reinterpret_cast<char *>(&phdr), sizeof(Elf_Phdr_Type));
+        if (file.gcount() != sizeof(Elf_Phdr_Type))
+        {
+            throw std::runtime_error("Incomplete ELF program header read");
+        }
+        _elf_phdrs.push_back(phdr);
+    }
+}
+
+ProgramHeaderType ElfHandler::ValidateElfProgramHeaderType(uint32_t type)
+{
+    if (type >= 0 && type <= 7)
+    {
+        return static_cast<ProgramHeaderType>(type);
+    }
+    else if (type >= 0x60000000 && type <= 0x6FFFFFFF)
+    {
+        return ProgramHeaderType::PT_OS;
+    }
+    else if (type >= 0x70000000 && type <= 0x7FFFFFFF)
+    {
+        return ProgramHeaderType::PT_OROC;
+    }
+    else
+    {
+        throw std::runtime_error("Invalid ELF program header type");
+    }
+}
+
+ProgramHeaderFlags ElfHandler::ValidateElfProgramHeaderFlags(uint32_t flags)
+{
+    ProgramHeaderFlags ph_flags{};
+    ph_flags.executable = flags & 0x1;
+    ph_flags.writable = flags & 0x2;
+    ph_flags.readable = flags & 0x4;
+    return ph_flags;
 }
