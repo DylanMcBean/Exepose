@@ -30,7 +30,7 @@ This tool was born out of the necessity to make this analysis process smoother, 
 
 ### Prerequisites
 
-- [List any prerequisites or dependencies here]
+- None as of yet
 
 ### Installation
 
