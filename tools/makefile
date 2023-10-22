@@ -20,7 +20,7 @@ CC = clang++
 AFL_CC = afl-clang-fast++
 CFLAGS = -Wall -c -O3 -I$(INC_DIR) -I/usr/include/opencv4 -std=c++20 -Wextra -Werror=return-type
 DEBUG_CFLAGS = $(CFLAGS) -g -O0
-FUZZ_CFLAGS = -g -fsanitize=address,undefined
+FUZZ_CFLAGS = -g -fsanitize=address,undefined -I$(INC_DIR) -I/usr/include/opencv4 -std=c++20 -Wextra -Werror=return-type
 
 # List of Source Files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
@@ -83,7 +83,19 @@ else
 	@echo "Try running 'make (,debug,fuzz)' and then run this command again"
 endif
 
+fuzztest:
+	@sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
+	@sudo sh -c "echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"
+ifneq ($(wildcard $(FUZZ_BIN_DIR)/main),)
+	@echo -e "\033[1;37;45mFuzz Mode\033[0m"
+	@echo
+	@afl-fuzz -D -i $(TESTS_IN_DIR) -o $(TESTS_OUT_DIR) $(FUZZ_BIN_DIR)/main @@
+else
+	@echo "No Fuzz Build built"
+	@echo "Try running 'make fuzz' and then run this command again"
+endif
+
 # Default Target
 .DEFAULT_GOAL := all
 
-.PHONY: clean run
+.PHONY: clean run fuzztest
