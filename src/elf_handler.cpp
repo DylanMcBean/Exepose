@@ -398,9 +398,13 @@ void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
 
     file.seekg(shstrtab_offset);
 
+    if (shstrtab_size == 0 || shstrtab_size > (file.end - file.beg))
+    {
+        throw std::runtime_error("Invalid ELF section header string table size"); 
+    }
     std::vector<char> shstrtab(shstrtab_size);
     file.read(shstrtab.data(), shstrtab_size);
-    if (file.gcount() != shstrtab_size)
+    if (file.gcount() != static_cast<std::streamsize>(shstrtab_size))
     {
         throw std::runtime_error("Incomplete ELF section header string table read");
     }
@@ -421,12 +425,18 @@ void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
             throw std::runtime_error("Invalid ELF type");
         }
 
-        if (name_offset >= shstrtab_size)
+        uint16_t next_null = 0;
+        while (name_offset + next_null < shstrtab_size && shstrtab[name_offset + next_null] != '\0')
+        {
+            next_null++;
+        }
+
+        if (name_offset >= shstrtab_size || name_offset + next_null >= shstrtab_size)
         {
             throw std::runtime_error("Invalid ELF section header name offset");
         }
-
-        std::string section_name(&shstrtab[name_offset]);
+        
+        std::string section_name(shstrtab.data() + name_offset, next_null);
         _section_header_name_map[i] = section_name;
     }
 }
