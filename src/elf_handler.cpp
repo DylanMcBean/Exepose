@@ -63,7 +63,7 @@ void ElfHandler::ValidateElfMagic(const std::array<uint8_t, EI_NIDENT> &ident)
 
 /**
  * Validates the ELF class of the given file and reads the ELF header accordingly.
- * 
+ *
  * @param ident The array of bytes containing the ELF identification information.
  * @param file The input file stream to read the ELF header from.
  * @throws std::runtime_error if the ELF class is invalid.
@@ -73,13 +73,13 @@ void ElfHandler::ValidateElfClass(const std::array<uint8_t, EI_NIDENT> &ident, s
     switch (ident[ELFCLASS_OFFSET])
     {
     case ELFCLASS32:
-        _elf_type = ElfType::ELF_32;
-        ReadElfHeader<Elf32_Ehdr>(file);
+        _elfType = ElfType::ELF_32;
+        ReadElfHeader<Elf32Ehdr>(file);
         break;
 
     case ELFCLASS64:
-        _elf_type = ElfType::ELF_64;
-        ReadElfHeader<Elf64_Ehdr>(file);
+        _elfType = ElfType::ELF_64;
+        ReadElfHeader<Elf64Ehdr>(file);
         break;
 
     default:
@@ -89,27 +89,27 @@ void ElfHandler::ValidateElfClass(const std::array<uint8_t, EI_NIDENT> &ident, s
 
 /**
  * @brief Reads the ELF header from the given file stream and stores it in the ElfHandler object.
- * 
+ *
  * @tparam Elf_Ehdr_Type The ELF header type to read.
  * @param file The file stream to read from.
  * @throws std::runtime_error If an incomplete ELF header is read.
  */
-template <typename Elf_Ehdr_Type> void ElfHandler::ReadElfHeader(std::ifstream &file)
+template <typename ElfEhdrType> void ElfHandler::ReadElfHeader(std::ifstream &file)
 {
-    Elf_Ehdr_Type ehdr{};
+    ElfEhdrType ehdr{};
     file.seekg(0);
-    file.read(reinterpret_cast<char *>(&ehdr), sizeof(Elf_Ehdr_Type));
-    if (file.gcount() != sizeof(Elf_Ehdr_Type))
+    file.read(reinterpret_cast<char *>(&ehdr), sizeof(ElfEhdrType));
+    if (file.gcount() != sizeof(ElfEhdrType))
     {
         throw std::runtime_error("Incomplete ELF header read");
     }
-    _elf_ehdr = ehdr;
-    _elf_ev_current = ehdr.e_version;
+    _elfEhdr = ehdr;
+    _elfEvCurrent = ehdr.e_version;
 }
 
 /**
  * @brief Validates the encoding of the ELF data.
- * 
+ *
  * @param ident The array of bytes containing the ELF identification information.
  * @throws std::runtime_error if the ELF data encoding is invalid.
  */
@@ -118,11 +118,11 @@ void ElfHandler::ValidateElfDataEncoding(const std::array<uint8_t, EI_NIDENT> &i
     switch (ident[ELFDATA_OFFSET])
     {
     case ELFDATA2LSB:
-        _elf_data_encoding = ElfDataEncoding::ELFDATA2LSB;
+        _elfDataEncoding = ElfDataEncoding::ELFDATA2LSB;
         break;
 
     case ELFDATA2MSB:
-        _elf_data_encoding = ElfDataEncoding::ELFDATA2MSB;
+        _elfDataEncoding = ElfDataEncoding::ELFDATA2MSB;
         break;
 
     default:
@@ -132,13 +132,13 @@ void ElfHandler::ValidateElfDataEncoding(const std::array<uint8_t, EI_NIDENT> &i
 
 /**
  * @brief Validates the ELF file version.
- * 
+ *
  * @param ident The array of bytes containing the ELF file identification information.
  * @throws std::runtime_error if the ELF file version is invalid.
  */
 void ElfHandler::ValidateFileVersion(const std::array<uint8_t, EI_NIDENT> &ident)
 {
-    if (ident[ELFVERSION_OFFSET] != _elf_ev_current)
+    if (ident[ELFVERSION_OFFSET] != _elfEvCurrent)
     {
         throw std::runtime_error("Invalid ELF file version");
     }
@@ -146,12 +146,12 @@ void ElfHandler::ValidateFileVersion(const std::array<uint8_t, EI_NIDENT> &ident
 
 /**
  * @brief Validates the OS ABI of the ELF file.
- * 
+ *
  * @param ident The array of bytes containing the ELF file identification information.
  */
 void ElfHandler::ValidateOSABI(const std::array<uint8_t, EI_NIDENT> &ident)
 {
-    _elf_osabi = MapToElfOsABI(ident[ELFOSABI_OFFSET]);
+    _elfOsabi = MapToElfOsABI(ident[ELFOSABI_OFFSET]);
 }
 
 /**
@@ -236,19 +236,19 @@ void ElfHandler::ValidateIdent(const std::array<uint8_t, EI_NIDENT> &ident)
 
 /**
  * @brief Validates the program headers of an ELF file.
- * 
+ *
  * @param file The input file stream of the ELF file.
  * @throws std::runtime_error if the ELF type is invalid.
  */
 void ElfHandler::ValidateElfProgramHeaders(std::ifstream &file)
 {
-    switch (_elf_type)
+    switch (_elfType)
     {
     case ElfType::ELF_32:
-        ReadElfProgramHeaders<Elf32_Phdr>(file);
+        ReadElfProgramHeaders<Elf32Phdr, Elf32Ehdr>(file);
         break;
     case ElfType::ELF_64:
-        ReadElfProgramHeaders<Elf64_Phdr>(file);
+        ReadElfProgramHeaders<Elf64Phdr, Elf64Ehdr>(file);
         break;
     default:
         throw std::runtime_error("Invalid ELF type");
@@ -257,56 +257,44 @@ void ElfHandler::ValidateElfProgramHeaders(std::ifstream &file)
 
 /**
  * @brief Reads the program headers of an ELF file and stores them in a vector.
- * 
+ *
  * @tparam Elf_Phdr_Type The type of the ELF program header.
  * @param file The input file stream of the ELF file.
  * @throws std::runtime_error if the ELF type is invalid or if an incomplete ELF program header is read.
  */
-template <typename Elf_Phdr_Type> void ElfHandler::ReadElfProgramHeaders(std::ifstream &file)
+template <typename ElfPhdrType, typename ElfEhdr> void ElfHandler::ReadElfProgramHeaders(std::ifstream &file)
 {
-    uint64_t phoff = 0;
-    uint64_t phnum = 0;
-    switch (_elf_type)
-    {
-    case ElfType::ELF_32:
-        phoff = std::get<Elf32_Ehdr>(_elf_ehdr).e_phoff;
-        phnum = std::get<Elf32_Ehdr>(_elf_ehdr).e_phnum;
-        break;
-    case ElfType::ELF_64:
-        phoff = std::get<Elf64_Ehdr>(_elf_ehdr).e_phoff;
-        phnum = std::get<Elf64_Ehdr>(_elf_ehdr).e_phnum;
-        break;
-    default:
-        throw std::runtime_error("Invalid ELF type");
-    }
+    uint64_t phoff = std::get<ElfEhdr>(_elfEhdr).e_phoff;
+    uint64_t phnum = std::get<ElfEhdr>(_elfEhdr).e_phnum;
+
     file.seekg(phoff);
     for (size_t i = 0; i < phnum; ++i)
     {
-        Elf_Phdr_Type phdr{};
-        file.read(reinterpret_cast<char *>(&phdr), sizeof(Elf_Phdr_Type));
-        if (file.gcount() != sizeof(Elf_Phdr_Type))
+        ElfPhdrType phdr{};
+        file.read(reinterpret_cast<char *>(&phdr), sizeof(ElfPhdrType));
+        if (file.gcount() != sizeof(ElfPhdrType))
         {
             throw std::runtime_error("Incomplete ELF program header read");
         }
-        _elf_phdrs.push_back(phdr);
+        _elfPhdrs.push_back(phdr);
     }
 }
 
 /**
  * @brief Validates the section headers of an ELF file.
- * 
+ *
  * @param file The input file stream of the ELF file.
  * @throws std::runtime_error If the ELF type is invalid.
  */
 void ElfHandler::ValidateElfSectionHeaders(std::ifstream &file)
 {
-    switch (_elf_type)
+    switch (_elfType)
     {
     case ElfType::ELF_32:
-        ReadElfSectionHeaders<Elf32_Shdr>(file);
+        ReadElfSectionHeaders<Elf32Shdr, Elf32Ehdr>(file);
         break;
     case ElfType::ELF_64:
-        ReadElfSectionHeaders<Elf64_Shdr>(file);
+        ReadElfSectionHeaders<Elf64Shdr, Elf64Ehdr>(file);
         break;
     default:
         throw std::runtime_error("Invalid ELF type");
@@ -315,128 +303,106 @@ void ElfHandler::ValidateElfSectionHeaders(std::ifstream &file)
 
 /**
  * @brief Reads the section headers of an ELF file.
- * 
+ *
  * @tparam Elf_Shdr_Type The type of the ELF section header.
  * @param file The input file stream to read from.
  * @throws std::runtime_error If the ELF type is invalid or if the section header read is incomplete.
  */
-template <typename Elf_Shdr_Type> void ElfHandler::ReadElfSectionHeaders(std::ifstream &file)
+template <typename ElfShdrType, typename ElfEhdr> void ElfHandler::ReadElfSectionHeaders(std::ifstream &file)
 {
-    uint64_t shoff = 0;
-    uint64_t shnum = 0;
-    switch (_elf_type)
-    {
-    case ElfType::ELF_32:
-        shoff = std::get<Elf32_Ehdr>(_elf_ehdr).e_shoff;
-        shnum = std::get<Elf32_Ehdr>(_elf_ehdr).e_shnum;
-        break;
-    case ElfType::ELF_64:
-        shoff = std::get<Elf64_Ehdr>(_elf_ehdr).e_shoff;
-        shnum = std::get<Elf64_Ehdr>(_elf_ehdr).e_shnum;
-        break;
-    default:
-        throw std::runtime_error("Invalid ELF type");
-    }
+    uint64_t shoff = std::get<ElfEhdr>(_elfEhdr).e_shoff;
+    uint64_t shnum = std::get<ElfEhdr>(_elfEhdr).e_shnum;
+
     file.seekg(shoff);
     for (size_t i = 0; i < shnum; ++i)
     {
-        Elf_Shdr_Type shdr{};
-        file.read(reinterpret_cast<char *>(&shdr), sizeof(Elf_Shdr_Type));
-        if (file.gcount() != sizeof(Elf_Shdr_Type))
+        ElfShdrType shdr{};
+        file.read(reinterpret_cast<char *>(&shdr), sizeof(ElfShdrType));
+        if (file.gcount() != sizeof(ElfShdrType))
         {
             throw std::runtime_error("Incomplete ELF section header read");
         }
-        _elf_shdrs.push_back(shdr);
+        _elfShdrs.push_back(shdr);
     }
 }
 
 /**
- * @brief Creates a map of section header names and their corresponding indices.
- * 
- * @param file The input file stream containing the ELF file.
- * @throws std::runtime_error if the ELF type is invalid, the section header string table index is invalid,
- * the ELF section header string table read is incomplete, or the ELF section header name offset is invalid.
+ * @brief Creates a map of section header names to their corresponding indices in the section header table.
+ *
+ * @param file An input file stream object representing the ELF file.
+ * @return void
+ * @throws std::runtime_error if the ELF type is invalid.
  */
 void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
 {
-    uint64_t shstrndx = 0;
-    
-    switch (_elf_type)
+
+    switch (_elfType)
     {
     case ElfType::ELF_32:
-        shstrndx = std::get<Elf32_Ehdr>(_elf_ehdr).e_shstrndx;
+        CreateSectionHeaderNameMap<Elf32Shdr, Elf32Ehdr, Elf32Shdr>(file);
         break;
     case ElfType::ELF_64:
-        shstrndx = std::get<Elf64_Ehdr>(_elf_ehdr).e_shstrndx;
+        CreateSectionHeaderNameMap<Elf64Shdr, Elf64Ehdr, Elf64Shdr>(file);
         break;
     default:
         throw std::runtime_error("Invalid ELF type");
     }
+}
 
-    if (shstrndx >= _elf_shdrs.size())
+/**
+ * @brief Creates a map of section header names for the ELF file.
+ *
+ * @tparam ElfShdrType The type of the ELF section header.
+ * @tparam ElfEhdr The type of the ELF header.
+ * @tparam ElfShdr The type of the ELF section.
+ * @param file The input file stream of the ELF file.
+ * @throws std::runtime_error If the ELF section header string table index is invalid, the ELF section header string
+ * table size is invalid, or the ELF section header name offset is invalid.
+ */
+template <typename ElfShdrType, typename ElfEhdr, typename ElfShdr>
+void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
+{
+    uint64_t shstrndx = std::get<ElfEhdr>(_elfEhdr).e_shstrndx;
+
+    if (shstrndx >= _elfShdrs.size())
     {
         throw std::runtime_error("Invalid ELF section header string table index");
     }
 
-    auto &shstrtab_hdr = _elf_shdrs[shstrndx];
-    uint64_t shstrtab_offset = 0;
-    uint64_t shstrtab_size = 0;
+    ElfShdr shstrtab_hdr = std::get<ElfShdr>(_elfShdrs[shstrndx]);
 
-    switch (_elf_type)
+    uint64_t shstrtabOffset = shstrtab_hdr.sh_offset;
+    uint64_t shstrtabSize = shstrtab_hdr.sh_size;
+
+    file.seekg(shstrtabOffset);
+
+    if (shstrtabSize == 0 || shstrtabSize > (file.end - file.beg))
     {
-    case ElfType::ELF_32:
-        shstrtab_offset = std::get<Elf32_Shdr>(shstrtab_hdr).sh_offset;
-        shstrtab_size = std::get<Elf32_Shdr>(shstrtab_hdr).sh_size;
-        break;
-    case ElfType::ELF_64:
-        shstrtab_offset = std::get<Elf64_Shdr>(shstrtab_hdr).sh_offset;
-        shstrtab_size = std::get<Elf64_Shdr>(shstrtab_hdr).sh_size;
-        break;
-    default:
-        throw std::runtime_error("Invalid ELF type");
+        throw std::runtime_error("Invalid ELF section header string table size");
     }
 
-    file.seekg(shstrtab_offset);
-
-    if (shstrtab_size == 0 || shstrtab_size > (file.end - file.beg))
-    {
-        throw std::runtime_error("Invalid ELF section header string table size"); 
-    }
-    std::vector<char> shstrtab(shstrtab_size);
-    file.read(shstrtab.data(), shstrtab_size);
-    if (file.gcount() != static_cast<std::streamsize>(shstrtab_size))
+    std::vector<char> shstrtab(shstrtabSize);
+    file.read(shstrtab.data(), shstrtabSize);
+    if (file.gcount() != static_cast<std::streamsize>(shstrtabSize))
     {
         throw std::runtime_error("Incomplete ELF section header string table read");
     }
 
-    for (size_t i = 0; i < _elf_shdrs.size(); i++)
+    for (size_t i = 0; i < _elfShdrs.size(); i++)
     {
-        uint64_t name_offset = 0;
-
-        switch (_elf_type)
+        uint64_t nameOffset = std::get<ElfShdr>(_elfShdrs[i]).sh_name;
+        uint16_t nextNull = 0;
+        while (nameOffset + nextNull < shstrtabSize && shstrtab[nameOffset + nextNull] != '\0')
         {
-        case ElfType::ELF_32:
-            name_offset = std::get<Elf32_Shdr>(_elf_shdrs[i]).sh_name;
-            break;
-        case ElfType::ELF_64:
-            name_offset = std::get<Elf64_Shdr>(_elf_shdrs[i]).sh_name;
-            break;
-        default:
-            throw std::runtime_error("Invalid ELF type");
+            nextNull++;
         }
 
-        uint16_t next_null = 0;
-        while (name_offset + next_null < shstrtab_size && shstrtab[name_offset + next_null] != '\0')
-        {
-            next_null++;
-        }
-
-        if (name_offset >= shstrtab_size || name_offset + next_null >= shstrtab_size)
+        if (nameOffset >= shstrtabSize || nameOffset + nextNull >= shstrtabSize)
         {
             throw std::runtime_error("Invalid ELF section header name offset");
         }
-        
-        std::string section_name(shstrtab.data() + name_offset, next_null);
-        _section_header_name_map[i] = section_name;
+
+        std::string sectionName(shstrtab.data() + nameOffset, nextNull);
+        _sectionHeaderNameMap[i] = sectionName;
     }
 }

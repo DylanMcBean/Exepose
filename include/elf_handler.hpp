@@ -1,13 +1,13 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <map>
 #include <stdexcept>
-#include <vector>
-#include <array>
 #include <variant>
+#include <vector>
 
 // SPEC - https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
 
@@ -26,54 +26,54 @@ constexpr uint8_t ELFDATA2LSB = 1;
 constexpr uint8_t ELFDATA2MSB = 2;
 
 // Elf Definitions - Same for 32bit and 64bit
-using Elf_half = uint16_t;
-using Elf_word = uint32_t;
+using ElfHalf = uint16_t;
+using ElfWord = uint32_t;
 
 // 32bit ELF definitions
-using Elf32_addr = uint32_t;
-using Elf32_off = uint32_t;
+using Elf32Addr = uint32_t;
+using Elf32Off = uint32_t;
 
 // 64bit ELF definitions
-using Elf64_addr = uint64_t;
-using Elf64_off = uint64_t;
+using Elf64Addr = uint64_t;
+using Elf64Off = uint64_t;
 
 // 32bit ELF header
 typedef struct
 {
     unsigned char e_ident[EI_NIDENT]; // ELF identification
-    Elf_half e_type;                  // Object file type
-    Elf_half e_machine;               // Machine type
-    Elf_word e_version;               // Object file version
-    Elf32_addr e_entry;               // Entry point address
-    Elf32_off e_phoff;                // Program header offset
-    Elf32_off e_shoff;                // Section header offset
-    Elf_word e_flags;                 // Processor-specific flags
-    Elf_half e_ehsize;                // ELF header size
-    Elf_half e_phentsize;             // Size of program header entry
-    Elf_half e_phnum;                 // Number of program header entries
-    Elf_half e_shentsize;             // Size of section header entry
-    Elf_half e_shnum;                 // Number of section header entries
-    Elf_half e_shstrndx;              // Section name string table index
-} Elf32_Ehdr;
+    ElfHalf e_type;                   // Object file type
+    ElfHalf e_machine;                // Machine type
+    ElfWord e_version;                // Object file version
+    Elf32Addr e_entry;                // Entry point address
+    Elf32Off e_phoff;                 // Program header offset
+    Elf32Off e_shoff;                 // Section header offset
+    ElfWord e_flags;                  // Processor-specific flags
+    ElfHalf e_ehsize;                 // ELF header size
+    ElfHalf e_phentsize;              // Size of program header entry
+    ElfHalf e_phnum;                  // Number of program header entries
+    ElfHalf e_shentsize;              // Size of section header entry
+    ElfHalf e_shnum;                  // Number of section header entries
+    ElfHalf e_shstrndx;               // Section name string table index
+} Elf32Ehdr;
 
 // 64bit ELF header
 typedef struct
 {
     unsigned char e_ident[EI_NIDENT]; // ELF identification
-    Elf_half e_type;                  // Object file type
-    Elf_half e_machine;               // Machine type
-    Elf_word e_version;               // Object file version
-    Elf64_addr e_entry;               // Entry point address
-    Elf64_off e_phoff;                // Program header offset
-    Elf64_off e_shoff;                // Section header offset
-    Elf_word e_flags;                 // Processor-specific flags
-    Elf_half e_ehsize;                // ELF header size
-    Elf_half e_phentsize;             // Size of program header entry
-    Elf_half e_phnum;                 // Number of program header entries
-    Elf_half e_shentsize;             // Size of section header entry
-    Elf_half e_shnum;                 // Number of section header entries
-    Elf_half e_shstrndx;              // Section name string table index
-} Elf64_Ehdr;
+    ElfHalf e_type;                   // Object file type
+    ElfHalf e_machine;                // Machine type
+    ElfWord e_version;                // Object file version
+    Elf64Addr e_entry;                // Entry point address
+    Elf64Off e_phoff;                 // Program header offset
+    Elf64Off e_shoff;                 // Section header offset
+    ElfWord e_flags;                  // Processor-specific flags
+    ElfHalf e_ehsize;                 // ELF header size
+    ElfHalf e_phentsize;              // Size of program header entry
+    ElfHalf e_phnum;                  // Number of program header entries
+    ElfHalf e_shentsize;              // Size of section header entry
+    ElfHalf e_shnum;                  // Number of section header entries
+    ElfHalf e_shstrndx;               // Section name string table index
+} Elf64Ehdr;
 
 enum class ElfType
 {
@@ -137,28 +137,28 @@ typedef struct ProgramHeaderFlags
 // 32bit ELF program header
 typedef struct
 {
-    Elf_word p_type;    // Type of segment
-    Elf32_off p_offset; // Offset in file
-    Elf32_addr p_vaddr; // Virtual address in memory
-    Elf32_addr p_paddr; // Reserved
-    Elf_word p_filesz;  // Size of segment in file
-    Elf_word p_memsz;   // Size of segment in memory
-    Elf_word p_flags;   // Segment attributes
-    Elf_word p_align;   // Alignment of segment
-} Elf32_Phdr;
+    ElfWord p_type;    // Type of segment
+    Elf32Off p_offset; // Offset in file
+    Elf32Addr p_vaddr; // Virtual address in memory
+    Elf32Addr p_paddr; // Reserved
+    ElfWord p_filesz;  // Size of segment in file
+    ElfWord p_memsz;   // Size of segment in memory
+    ElfWord p_flags;   // Segment attributes
+    ElfWord p_align;   // Alignment of segment
+} Elf32Phdr;
 
 // 64bit ELF program header
 typedef struct
 {
-    Elf_word p_type;    // Type of segment
-    Elf32_off p_flags;  // Segment attributes
-    Elf64_off p_offset; // Offset in file
-    Elf64_addr p_vaddr; // Virtual address in memory
-    Elf64_addr p_paddr; // Reserved
-    Elf64_off p_filesz; // Size of segment in file
-    Elf64_off p_memsz;  // Size of segment in memory
-    Elf64_off p_align;  // Alignment of segment
-} Elf64_Phdr;
+    ElfWord p_type;    // Type of segment
+    Elf32Off p_flags;  // Segment attributes
+    Elf64Off p_offset; // Offset in file
+    Elf64Addr p_vaddr; // Virtual address in memory
+    Elf64Addr p_paddr; // Reserved
+    Elf64Off p_filesz; // Size of segment in file
+    Elf64Off p_memsz;  // Size of segment in memory
+    Elf64Off p_align;  // Alignment of segment
+} Elf64Phdr;
 
 enum class SectionHeaderType
 {
@@ -198,38 +198,38 @@ typedef struct SectionHeaderFlags
     static constexpr uint64_t SHF_MASKOS = 0x0ff00000;      // OS-specific
     static constexpr uint64_t SHF_MASKPROC = 0xf0000000;    // Processor-specific
     static constexpr uint64_t SHF_ORDERED = 0x4000000;      // Special ordering requirement (Solaris)
-    static constexpr uint64_t SHF_EXCLUDE = 0x8000000;      // Section is excluded unless referenced or allocated (Solaris)
+    static constexpr uint64_t SHF_EXCLUDE = 0x8000000; // Section is excluded unless referenced or allocated (Solaris)
 } SectionHeaderFlags;
 
 // 32bit ELF section header
 typedef struct
 {
-    Elf_word sh_name;      // Section name (string tbl index)
-    Elf_word sh_type;      // Section type
-    Elf_word sh_flags;     // Section flags
-    Elf32_addr sh_addr;    // Section virtual addr at execution
-    Elf32_off sh_offset;   // Section file offset
-    Elf_word sh_size;      // Section size in bytes
-    Elf_word sh_link;      // Link to another section
-    Elf_word sh_info;      // Additional section information
-    Elf_word sh_addralign; // Section alignment
-    Elf_word sh_entsize;   // Entry size if section holds table
-} Elf32_Shdr;
+    ElfWord sh_name;      // Section name (string tbl index)
+    ElfWord sh_type;      // Section type
+    ElfWord sh_flags;     // Section flags
+    Elf32Addr sh_addr;    // Section virtual addr at execution
+    Elf32Off sh_offset;   // Section file offset
+    ElfWord sh_size;      // Section size in bytes
+    ElfWord sh_link;      // Link to another section
+    ElfWord sh_info;      // Additional section information
+    ElfWord sh_addralign; // Section alignment
+    ElfWord sh_entsize;   // Entry size if section holds table
+} Elf32Shdr;
 
 // 64bit ELF section header
 typedef struct
 {
-    Elf_word sh_name;      // Section name (string tbl index)
-    Elf_word sh_type;      // Section type
-    Elf64_off sh_flags;    // Section flags
-    Elf64_addr sh_addr;    // Section virtual addr at execution
-    Elf64_off sh_offset;   // Section file offset
-    Elf64_addr sh_size;      // Section size in bytes
-    Elf_word sh_link;      // Link to another section
-    Elf_word sh_info;      // Additional section information
-    Elf64_addr sh_addralign; // Section alignment
-    Elf64_addr sh_entsize;   // Entry size if section holds table
-} Elf64_Shdr;
+    ElfWord sh_name;        // Section name (string tbl index)
+    ElfWord sh_type;        // Section type
+    Elf64Off sh_flags;      // Section flags
+    Elf64Addr sh_addr;      // Section virtual addr at execution
+    Elf64Off sh_offset;     // Section file offset
+    Elf64Addr sh_size;      // Section size in bytes
+    ElfWord sh_link;        // Link to another section
+    ElfWord sh_info;        // Additional section information
+    Elf64Addr sh_addralign; // Section alignment
+    Elf64Addr sh_entsize;   // Entry size if section holds table
+} Elf64Shdr;
 
 class ElfHandler
 {
@@ -237,22 +237,25 @@ class ElfHandler
     // Public Constructors/Destructors
     explicit ElfHandler(const std::string &fileName);
 
+    void PrintSectionHeaders();
+
   private:
     // Private Data Members
-    std::variant<Elf32_Ehdr, Elf64_Ehdr> _elf_ehdr;
-    std::vector<std::variant<Elf32_Phdr, Elf64_Phdr>> _elf_phdrs;
-    std::vector<std::variant<Elf32_Shdr, Elf64_Shdr>> _elf_shdrs;
-    ElfType _elf_type;
-    ElfDataEncoding _elf_data_encoding;
-    uint8_t _elf_ev_current = 0;
-    ElfOsABI _elf_osabi;
-    std::map<uint64_t, std::string> _section_header_name_map;
+    std::variant<Elf32Ehdr, Elf64Ehdr> _elfEhdr;
+    std::vector<std::variant<Elf32Phdr, Elf64Phdr>> _elfPhdrs;
+    std::vector<std::variant<Elf32Shdr, Elf64Shdr>> _elfShdrs;
+    ElfType _elfType;
+    ElfDataEncoding _elfDataEncoding;
+    uint8_t _elfEvCurrent = 0;
+    ElfOsABI _elfOsabi;
+    std::map<uint64_t, std::string> _sectionHeaderNameMap;
 
     // Private Helper Methods
     void ReadFile(const std::string &fileName);
     template <typename T> void ReadElfHeader(std::ifstream &file);
-    template <typename T> void ReadElfProgramHeaders(std::ifstream &file);
-    template <typename T> void ReadElfSectionHeaders(std::ifstream &file);
+    template <typename T1, typename T2> void ReadElfProgramHeaders(std::ifstream &file);
+    template <typename T1, typename T2> void ReadElfSectionHeaders(std::ifstream &file);
+    template <typename T1, typename T2, typename T3> void CreateSectionHeaderNameMap(std::ifstream &file);
     ElfOsABI MapToElfOsABI(uint16_t value);
 
     // Private Validation Methods
