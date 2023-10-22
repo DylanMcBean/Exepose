@@ -30,6 +30,7 @@ void ElfHandler::ReadFile(const std::string &fileName)
     ValidatePAD(ident);
     ValidateIdent(ident);
     ValidateElfProgramHeaders(file);
+    ValidateElfSectionHeaders(file);
 }
 
 void ElfHandler::ValidateElfMagic(const std::array<uint8_t, EI_NIDENT> &ident)
@@ -150,7 +151,8 @@ ElfOsABI ElfHandler::MapToElfOsABI(uint16_t value)
     case 255:
         return ElfOsABI::ELFOSABI_STANDALONE;
     default:
-        throw std::runtime_error("Invalid ELF OS ABI");
+        Helper::LogWarning("Unknown ELF OS ABI: %d\n", value);
+        return ElfOsABI::ELFOSABI_NONE;
     }
 }
 
@@ -163,7 +165,8 @@ void ElfHandler::ValidatePAD(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     if (memcmp(ident.data() + ELFABIVERSION_OFFSET, &ELFPAD, sizeof(ELFPAD)) != 0)
     {
-        throw std::runtime_error("Invalid ELF padding");
+        // shouldnt throw an error, but should log a warning that padding is not all zero
+        Helper::LogWarning("ELF padding is not all zero'd\n");
     }
 }
 
@@ -217,31 +220,47 @@ template <typename Elf_Phdr_Type> void ElfHandler::ReadElfProgramHeaders(std::if
     }
 }
 
-ProgramHeaderType ElfHandler::ValidateElfProgramHeaderType(uint32_t type)
+void ElfHandler::ValidateElfSectionHeaders(std::ifstream &file)
 {
-    if (type >= 0 && type <= 7)
+    switch (_elf_type)
     {
-        return static_cast<ProgramHeaderType>(type);
-    }
-    else if (type >= 0x60000000 && type <= 0x6FFFFFFF)
-    {
-        return ProgramHeaderType::PT_OS;
-    }
-    else if (type >= 0x70000000 && type <= 0x7FFFFFFF)
-    {
-        return ProgramHeaderType::PT_OROC;
-    }
-    else
-    {
-        throw std::runtime_error("Invalid ELF program header type");
+    case ElfType::ELF_32:
+        ReadElfSectionHeaders<Elf32_Shdr>(file);
+        break;
+    case ElfType::ELF_64:
+        ReadElfSectionHeaders<Elf64_Shdr>(file);
+        break;
+    default:
+        throw std::runtime_error("Invalid ELF type");
     }
 }
 
-ProgramHeaderFlags ElfHandler::ValidateElfProgramHeaderFlags(uint32_t flags)
+template <typename Elf_Shdr_Type> void ElfHandler::ReadElfSectionHeaders(std::ifstream &file)
 {
-    ProgramHeaderFlags ph_flags{};
-    ph_flags.executable = flags & 0x1;
-    ph_flags.writable = flags & 0x2;
-    ph_flags.readable = flags & 0x4;
-    return ph_flags;
+    uint64_t shoff = 0;
+    uint64_t shnum = 0;
+    switch (_elf_type)
+    {
+    case ElfType::ELF_32:
+        shoff = std::get<Elf32_Ehdr>(_elf_ehdr).e_shoff;
+        shnum = std::get<Elf32_Ehdr>(_elf_ehdr).e_shnum;
+        break;
+    case ElfType::ELF_64:
+        shoff = std::get<Elf64_Ehdr>(_elf_ehdr).e_shoff;
+        shnum = std::get<Elf64_Ehdr>(_elf_ehdr).e_shnum;
+        break;
+    default:
+        throw std::runtime_error("Invalid ELF type");
+    }
+    file.seekg(shoff);
+    for (size_t i = 0; i < shnum; ++i)
+    {
+        Elf_Shdr_Type shdr{};
+        file.read(reinterpret_cast<char *>(&shdr), sizeof(Elf_Shdr_Type));
+        if (file.gcount() != sizeof(Elf_Shdr_Type))
+        {
+            throw std::runtime_error("Incomplete ELF section header read");
+        }
+        _elf_shdrs.push_back(shdr);
+    }
 }

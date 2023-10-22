@@ -20,6 +20,14 @@ void Helper::LogInfo(const char *infoMessage, ...)
     va_end(args);
 }
 
+void Helper::LogWarning(const char *warningMessage, ...)
+{
+    va_list args;
+    va_start(args, warningMessage);
+    vfprintf(stdout, warningMessage, args);
+    va_end(args);
+}
+
 std::string Helper::toByteEncoded(const uint8_t *data, size_t length)
 {
     static const char *hexChars = "0123456789ABCDEF";

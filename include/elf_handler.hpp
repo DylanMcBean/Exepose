@@ -8,6 +8,7 @@
 #include <string.h>
 #include <variant>
 #include <vector>
+#include <set>
 
 // SPEC - https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
 
@@ -127,17 +128,17 @@ enum class ProgramHeaderType
     PT_OROC = 9,    // processor-specific program hdr entry type
 };
 
-typedef struct
+typedef struct ProgramHeaderFlags
 {
-  bool executable : 1;
-  bool writable : 1;
-  bool readable : 1;
+    static constexpr uint32_t PF_X = 0x1; // Execute
+    static constexpr uint32_t PF_W = 0x2; // Write
+    static constexpr uint32_t PF_R = 0x4; // Read
 } ProgramHeaderFlags;
 
 // 32bit ELF program header
 typedef struct
 {
-    Elf_word p_type;   // Type of segment
+    Elf_word p_type;    // Type of segment
     Elf32_off p_offset; // Offset in file
     Elf32_addr p_vaddr; // Virtual address in memory
     Elf32_addr p_paddr; // Reserved
@@ -150,15 +151,86 @@ typedef struct
 // 64bit ELF program header
 typedef struct
 {
-    Elf_word p_type;   // Type of segment
-    Elf32_off p_flags; // Segment attributes
+    Elf_word p_type;    // Type of segment
+    Elf32_off p_flags;  // Segment attributes
     Elf64_off p_offset; // Offset in file
     Elf64_addr p_vaddr; // Virtual address in memory
     Elf64_addr p_paddr; // Reserved
-    Elf64_off p_filesz;  // Size of segment in file
-    Elf64_off p_memsz;   // Size of segment in memory
-    Elf64_off p_align;   // Alignment of segment
+    Elf64_off p_filesz; // Size of segment in file
+    Elf64_off p_memsz;  // Size of segment in memory
+    Elf64_off p_align;  // Alignment of segment
 } Elf64_Phdr;
+
+enum class SelectionHeaderType
+{
+    SHT_NULL = 0,           // Section header table entry unused
+    SHT_PROGBITS = 1,       // Program data
+    SHT_SYMTAB = 2,         // Symbol table
+    SHT_STRTAB = 3,         // String table
+    SHT_RELA = 4,           // Relocation entries with addends
+    SHT_HASH = 5,           // Symbol hash table
+    SHT_DYNAMIC = 6,        // Dynamic linking information
+    SHT_NOTE = 7,           // Notes
+    SHT_NOBITS = 8,         // Program space with no data (bss)
+    SHT_REL = 9,            // Relocation entries, no addends
+    SHT_SHLIB = 10,         // Reserved
+    SHT_DYNSYM = 11,        // Dynamic linker symbol table
+    SHT_INIT_ARRAY = 14,    // Array of constructors
+    SHT_FINI_ARRAY = 15,    // Array of destructors
+    SHT_PREINIT_ARRAY = 16, // Array of pre-constructors
+    SHT_GROUP = 17,         // Section group
+    SHT_SYMTAB_SHNDX = 18,  // Extended section indeces
+    SHT_NUM = 19,           // Number of defined types.
+    SHT_OS = 20,            // Start OS-specific.
+};
+
+typedef struct SelectionHeaderFlags
+{
+    static constexpr uint64_t SHF_WRITE = 0x1;              // Writable
+    static constexpr uint64_t SHF_ALLOC = 0x2;              // Occupies memory during execution
+    static constexpr uint64_t SHF_EXECINSTR = 0x4;          // Executable
+    static constexpr uint64_t SHF_MERGE = 0x10;             // Might be merged
+    static constexpr uint64_t SHF_STRINGS = 0x20;           // Contains nul-terminated strings
+    static constexpr uint64_t SHF_INFO_LINK = 0x40;         // `sh_info' contains SHT index
+    static constexpr uint64_t SHF_LINK_ORDER = 0x80;        // Preserve order after combining
+    static constexpr uint64_t SHF_OS_NONCONFORMING = 0x100; // Non-standard OS specific handling required
+    static constexpr uint64_t SHF_GROUP = 0x200;            // Section is member of a group
+    static constexpr uint64_t SHF_TLS = 0x400;              // Section hold thread-local data
+    static constexpr uint64_t SHF_MASKOS = 0x0ff00000;      // OS-specific
+    static constexpr uint64_t SHF_MASKPROC = 0xf0000000;    // Processor-specific
+    static constexpr uint64_t SHF_ORDERED = 0x4000000;      // Special ordering requirement (Solaris)
+    static constexpr uint64_t SHF_EXCLUDE = 0x8000000;      // Section is excluded unless referenced or allocated (Solaris)
+} SelectionHeaderFlags;
+
+// 32bit ELF section header
+typedef struct
+{
+    Elf_word sh_name;      // Section name (string tbl index)
+    Elf_word sh_type;      // Section type
+    Elf_word sh_flags;     // Section flags
+    Elf32_addr sh_addr;    // Section virtual addr at execution
+    Elf32_off sh_offset;   // Section file offset
+    Elf_word sh_size;      // Section size in bytes
+    Elf_word sh_link;      // Link to another section
+    Elf_word sh_info;      // Additional section information
+    Elf_word sh_addralign; // Section alignment
+    Elf_word sh_entsize;   // Entry size if section holds table
+} Elf32_Shdr;
+
+// 64bit ELF section header
+typedef struct
+{
+    Elf_word sh_name;      // Section name (string tbl index)
+    Elf_word sh_type;      // Section type
+    Elf64_off sh_flags;    // Section flags
+    Elf64_addr sh_addr;    // Section virtual addr at execution
+    Elf64_off sh_offset;   // Section file offset
+    Elf64_addr sh_size;      // Section size in bytes
+    Elf_word sh_link;      // Link to another section
+    Elf_word sh_info;      // Additional section information
+    Elf64_addr sh_addralign; // Section alignment
+    Elf64_addr sh_entsize;   // Entry size if section holds table
+} Elf64_Shdr;
 
 class ElfHandler
 {
@@ -170,6 +242,7 @@ class ElfHandler
     // Private Data Members
     std::variant<Elf32_Ehdr, Elf64_Ehdr> _elf_ehdr;
     std::vector<std::variant<Elf32_Phdr, Elf64_Phdr>> _elf_phdrs;
+    std::vector<std::variant<Elf32_Shdr, Elf64_Shdr>> _elf_shdrs;
     ElfType _elf_type;
     ElfDataEncoding _elf_data_encoding;
     uint8_t _elf_ev_current = 0;
@@ -179,6 +252,7 @@ class ElfHandler
     void ReadFile(const std::string &fileName);
     template <typename T> void ReadElfHeader(std::ifstream &file);
     template <typename T> void ReadElfProgramHeaders(std::ifstream &file);
+    template <typename T> void ReadElfSectionHeaders(std::ifstream &file);
     ElfOsABI MapToElfOsABI(uint16_t value);
 
     // Private Validation Methods
@@ -191,6 +265,5 @@ class ElfHandler
     void ValidatePAD(const std::array<uint8_t, EI_NIDENT> &ident);
     void ValidateIdent(const std::array<uint8_t, EI_NIDENT> &ident);
     void ValidateElfProgramHeaders(std::ifstream &file);
-    ProgramHeaderType ValidateElfProgramHeaderType(uint32_t value);
-    ProgramHeaderFlags ValidateElfProgramHeaderFlags(uint32_t value);
+    void ValidateElfSectionHeaders(std::ifstream &file);
 };
