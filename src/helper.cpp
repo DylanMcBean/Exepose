@@ -3,6 +3,12 @@
 #include <cstdio>
 #include <cstdlib>
 
+/**
+ * Logs an error message to the standard error stream and exits the program with the given error code.
+ * @param errorCode The error code to exit the program with.
+ * @param errorMessage The error message to log. Can contain format specifiers.
+ * @param ... Additional arguments to be substituted in the error message.
+ */
 void Helper::LogError(int errorCode, const char *errorMessage, ...)
 {
     va_list args;
@@ -12,6 +18,12 @@ void Helper::LogError(int errorCode, const char *errorMessage, ...)
     exit(errorCode);
 }
 
+/**
+ * Logs an informational message to the standard output stream.
+ *
+ * @param infoMessage The message to log.
+ * @param ...         Optional arguments to format the message with.
+ */
 void Helper::LogInfo(const char *infoMessage, ...)
 {
     va_list args;
@@ -20,6 +32,11 @@ void Helper::LogInfo(const char *infoMessage, ...)
     va_end(args);
 }
 
+/**
+ * Logs a warning message to the console.
+ * @param warningMessage The warning message to log.
+ * @param ... Additional arguments to format the warning message.
+ */
 void Helper::LogWarning(const char *warningMessage, ...)
 {
     va_list args;
@@ -28,6 +45,14 @@ void Helper::LogWarning(const char *warningMessage, ...)
     va_end(args);
 }
 
+/**
+ * Converts a byte array to a string of its hexadecimal representation.
+ * Non-printable characters are represented as escape sequences.
+ * 
+ * @param data The byte array to be converted.
+ * @param length The length of the byte array.
+ * @return A string of the hexadecimal representation of the byte array.
+ */
 std::string Helper::toByteEncoded(const uint8_t *data, size_t length)
 {
     static const char *hexChars = "0123456789ABCDEF";

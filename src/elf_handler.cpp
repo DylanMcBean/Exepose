@@ -1,11 +1,21 @@
 #include "elf_handler.hpp"
 #include "helper.hpp"
 
+/**
+ * @brief Constructor for the ElfHandler class.
+ * 
+ * @param fileName The name of the ELF file to be read.
+ */
 ElfHandler::ElfHandler(const std::string &fileName)
 {
     ReadFile(fileName);
 }
 
+/**
+ * Reads an ELF file and validates its headers and sections.
+ * @param fileName The path to the ELF file to read.
+ * @throws std::runtime_error if the file cannot be opened or if any of the headers or sections are invalid.
+ */
 void ElfHandler::ReadFile(const std::string &fileName)
 {
     std::ifstream file(fileName, std::ios::binary);
@@ -35,6 +45,11 @@ void ElfHandler::ReadFile(const std::string &fileName)
     CreateSectionHeaderNameMap(file);
 }
 
+/**
+ * Validates the ELF magic number of the given ident array.
+ * @param ident The array containing the ELF magic number.
+ * @throws std::runtime_error if the magic number is invalid.
+ */
 void ElfHandler::ValidateElfMagic(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     if (memcmp(ident.data(), &ELFMAG, ELFMAG_SIZE) != 0)
@@ -46,6 +61,13 @@ void ElfHandler::ValidateElfMagic(const std::array<uint8_t, EI_NIDENT> &ident)
     }
 }
 
+/**
+ * Validates the ELF class of the given file and reads the ELF header accordingly.
+ * 
+ * @param ident The array of bytes containing the ELF identification information.
+ * @param file The input file stream to read the ELF header from.
+ * @throws std::runtime_error if the ELF class is invalid.
+ */
 void ElfHandler::ValidateElfClass(const std::array<uint8_t, EI_NIDENT> &ident, std::ifstream &file)
 {
     switch (ident[ELFCLASS_OFFSET])
@@ -65,6 +87,13 @@ void ElfHandler::ValidateElfClass(const std::array<uint8_t, EI_NIDENT> &ident, s
     }
 }
 
+/**
+ * @brief Reads the ELF header from the given file stream and stores it in the ElfHandler object.
+ * 
+ * @tparam Elf_Ehdr_Type The ELF header type to read.
+ * @param file The file stream to read from.
+ * @throws std::runtime_error If an incomplete ELF header is read.
+ */
 template <typename Elf_Ehdr_Type> void ElfHandler::ReadElfHeader(std::ifstream &file)
 {
     Elf_Ehdr_Type ehdr{};
@@ -78,6 +107,12 @@ template <typename Elf_Ehdr_Type> void ElfHandler::ReadElfHeader(std::ifstream &
     _elf_ev_current = ehdr.e_version;
 }
 
+/**
+ * @brief Validates the encoding of the ELF data.
+ * 
+ * @param ident The array of bytes containing the ELF identification information.
+ * @throws std::runtime_error if the ELF data encoding is invalid.
+ */
 void ElfHandler::ValidateElfDataEncoding(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     switch (ident[ELFDATA_OFFSET])
@@ -95,6 +130,12 @@ void ElfHandler::ValidateElfDataEncoding(const std::array<uint8_t, EI_NIDENT> &i
     }
 }
 
+/**
+ * @brief Validates the ELF file version.
+ * 
+ * @param ident The array of bytes containing the ELF file identification information.
+ * @throws std::runtime_error if the ELF file version is invalid.
+ */
 void ElfHandler::ValidateFileVersion(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     if (ident[ELFVERSION_OFFSET] != _elf_ev_current)
@@ -103,11 +144,22 @@ void ElfHandler::ValidateFileVersion(const std::array<uint8_t, EI_NIDENT> &ident
     }
 }
 
+/**
+ * @brief Validates the OS ABI of the ELF file.
+ * 
+ * @param ident The array of bytes containing the ELF file identification information.
+ */
 void ElfHandler::ValidateOSABI(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     _elf_osabi = MapToElfOsABI(ident[ELFOSABI_OFFSET]);
 }
 
+/**
+ * Maps a given uint16_t value to its corresponding ElfOsABI enum value.
+ * @param value The uint16_t value to be mapped.
+ * @return The corresponding ElfOsABI enum value.
+ * If the given value is not recognized, a warning message is logged and ElfOsABI::ELFOSABI_NONE is returned.
+ */
 ElfOsABI ElfHandler::MapToElfOsABI(uint16_t value)
 {
     switch (value)
@@ -163,6 +215,11 @@ void ElfHandler::ValidateABIVersion(const std::array<uint8_t, EI_NIDENT> &ident)
     // TODO: Implement
 }
 
+/**
+ * Validates the Program Auxiliary Data (PAD) of an ELF file.
+ * @param ident The array of bytes representing the ELF file header.
+ * @return void
+ */
 void ElfHandler::ValidatePAD(const std::array<uint8_t, EI_NIDENT> &ident)
 {
     if (memcmp(ident.data() + ELFABIVERSION_OFFSET, &ELFPAD, sizeof(ELFPAD)) != 0)
@@ -177,6 +234,12 @@ void ElfHandler::ValidateIdent(const std::array<uint8_t, EI_NIDENT> &ident)
     // TODO: Implement
 }
 
+/**
+ * @brief Validates the program headers of an ELF file.
+ * 
+ * @param file The input file stream of the ELF file.
+ * @throws std::runtime_error if the ELF type is invalid.
+ */
 void ElfHandler::ValidateElfProgramHeaders(std::ifstream &file)
 {
     switch (_elf_type)
@@ -192,6 +255,13 @@ void ElfHandler::ValidateElfProgramHeaders(std::ifstream &file)
     }
 }
 
+/**
+ * @brief Reads the program headers of an ELF file and stores them in a vector.
+ * 
+ * @tparam Elf_Phdr_Type The type of the ELF program header.
+ * @param file The input file stream of the ELF file.
+ * @throws std::runtime_error if the ELF type is invalid or if an incomplete ELF program header is read.
+ */
 template <typename Elf_Phdr_Type> void ElfHandler::ReadElfProgramHeaders(std::ifstream &file)
 {
     uint64_t phoff = 0;
@@ -222,6 +292,12 @@ template <typename Elf_Phdr_Type> void ElfHandler::ReadElfProgramHeaders(std::if
     }
 }
 
+/**
+ * @brief Validates the section headers of an ELF file.
+ * 
+ * @param file The input file stream of the ELF file.
+ * @throws std::runtime_error If the ELF type is invalid.
+ */
 void ElfHandler::ValidateElfSectionHeaders(std::ifstream &file)
 {
     switch (_elf_type)
@@ -237,6 +313,13 @@ void ElfHandler::ValidateElfSectionHeaders(std::ifstream &file)
     }
 }
 
+/**
+ * @brief Reads the section headers of an ELF file.
+ * 
+ * @tparam Elf_Shdr_Type The type of the ELF section header.
+ * @param file The input file stream to read from.
+ * @throws std::runtime_error If the ELF type is invalid or if the section header read is incomplete.
+ */
 template <typename Elf_Shdr_Type> void ElfHandler::ReadElfSectionHeaders(std::ifstream &file)
 {
     uint64_t shoff = 0;
@@ -266,6 +349,14 @@ template <typename Elf_Shdr_Type> void ElfHandler::ReadElfSectionHeaders(std::if
         _elf_shdrs.push_back(shdr);
     }
 }
+
+/**
+ * @brief Creates a map of section header names and their corresponding indices.
+ * 
+ * @param file The input file stream containing the ELF file.
+ * @throws std::runtime_error if the ELF type is invalid, the section header string table index is invalid,
+ * the ELF section header string table read is incomplete, or the ELF section header name offset is invalid.
+ */
 void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
 {
     uint64_t shstrndx = 0;
