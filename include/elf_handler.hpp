@@ -1,14 +1,13 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <map>
 #include <stdexcept>
-#include <string.h>
-#include <variant>
 #include <vector>
-#include <set>
+#include <array>
+#include <variant>
 
 // SPEC - https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
 
@@ -161,7 +160,7 @@ typedef struct
     Elf64_off p_align;  // Alignment of segment
 } Elf64_Phdr;
 
-enum class SelectionHeaderType
+enum class SectionHeaderType
 {
     SHT_NULL = 0,           // Section header table entry unused
     SHT_PROGBITS = 1,       // Program data
@@ -184,7 +183,7 @@ enum class SelectionHeaderType
     SHT_OS = 20,            // Start OS-specific.
 };
 
-typedef struct SelectionHeaderFlags
+typedef struct SectionHeaderFlags
 {
     static constexpr uint64_t SHF_WRITE = 0x1;              // Writable
     static constexpr uint64_t SHF_ALLOC = 0x2;              // Occupies memory during execution
@@ -200,7 +199,7 @@ typedef struct SelectionHeaderFlags
     static constexpr uint64_t SHF_MASKPROC = 0xf0000000;    // Processor-specific
     static constexpr uint64_t SHF_ORDERED = 0x4000000;      // Special ordering requirement (Solaris)
     static constexpr uint64_t SHF_EXCLUDE = 0x8000000;      // Section is excluded unless referenced or allocated (Solaris)
-} SelectionHeaderFlags;
+} SectionHeaderFlags;
 
 // 32bit ELF section header
 typedef struct
@@ -247,6 +246,7 @@ class ElfHandler
     ElfDataEncoding _elf_data_encoding;
     uint8_t _elf_ev_current = 0;
     ElfOsABI _elf_osabi;
+    std::map<uint64_t, std::string> _section_header_name_map;
 
     // Private Helper Methods
     void ReadFile(const std::string &fileName);
@@ -266,4 +266,7 @@ class ElfHandler
     void ValidateIdent(const std::array<uint8_t, EI_NIDENT> &ident);
     void ValidateElfProgramHeaders(std::ifstream &file);
     void ValidateElfSectionHeaders(std::ifstream &file);
+
+    // Private Methods
+    void CreateSectionHeaderNameMap(std::ifstream &file);
 };

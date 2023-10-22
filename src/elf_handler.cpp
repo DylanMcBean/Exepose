@@ -31,6 +31,8 @@ void ElfHandler::ReadFile(const std::string &fileName)
     ValidateIdent(ident);
     ValidateElfProgramHeaders(file);
     ValidateElfSectionHeaders(file);
+
+    CreateSectionHeaderNameMap(file);
 }
 
 void ElfHandler::ValidateElfMagic(const std::array<uint8_t, EI_NIDENT> &ident)
@@ -262,5 +264,78 @@ template <typename Elf_Shdr_Type> void ElfHandler::ReadElfSectionHeaders(std::if
             throw std::runtime_error("Incomplete ELF section header read");
         }
         _elf_shdrs.push_back(shdr);
+    }
+}
+void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
+{
+    uint64_t shstrndx = 0;
+    
+    switch (_elf_type)
+    {
+    case ElfType::ELF_32:
+        shstrndx = std::get<Elf32_Ehdr>(_elf_ehdr).e_shstrndx;
+        break;
+    case ElfType::ELF_64:
+        shstrndx = std::get<Elf64_Ehdr>(_elf_ehdr).e_shstrndx;
+        break;
+    default:
+        throw std::runtime_error("Invalid ELF type");
+    }
+
+    if (shstrndx >= _elf_shdrs.size())
+    {
+        throw std::runtime_error("Invalid ELF section header string table index");
+    }
+
+    auto &shstrtab_hdr = _elf_shdrs[shstrndx];
+    uint64_t shstrtab_offset = 0;
+    uint64_t shstrtab_size = 0;
+
+    switch (_elf_type)
+    {
+    case ElfType::ELF_32:
+        shstrtab_offset = std::get<Elf32_Shdr>(shstrtab_hdr).sh_offset;
+        shstrtab_size = std::get<Elf32_Shdr>(shstrtab_hdr).sh_size;
+        break;
+    case ElfType::ELF_64:
+        shstrtab_offset = std::get<Elf64_Shdr>(shstrtab_hdr).sh_offset;
+        shstrtab_size = std::get<Elf64_Shdr>(shstrtab_hdr).sh_size;
+        break;
+    default:
+        throw std::runtime_error("Invalid ELF type");
+    }
+
+    file.seekg(shstrtab_offset);
+
+    std::vector<char> shstrtab(shstrtab_size);
+    file.read(shstrtab.data(), shstrtab_size);
+    if (file.gcount() != shstrtab_size)
+    {
+        throw std::runtime_error("Incomplete ELF section header string table read");
+    }
+
+    for (size_t i = 0; i < _elf_shdrs.size(); i++)
+    {
+        uint64_t name_offset = 0;
+
+        switch (_elf_type)
+        {
+        case ElfType::ELF_32:
+            name_offset = std::get<Elf32_Shdr>(_elf_shdrs[i]).sh_name;
+            break;
+        case ElfType::ELF_64:
+            name_offset = std::get<Elf64_Shdr>(_elf_shdrs[i]).sh_name;
+            break;
+        default:
+            throw std::runtime_error("Invalid ELF type");
+        }
+
+        if (name_offset >= shstrtab_size)
+        {
+            throw std::runtime_error("Invalid ELF section header name offset");
+        }
+
+        std::string section_name(&shstrtab[name_offset]);
+        _section_header_name_map[i] = section_name;
     }
 }
