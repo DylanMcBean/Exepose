@@ -18,9 +18,9 @@ FUZZ_BIN_DIR = ../build/bin/fuzz
 # Compiler Flags
 CC = clang++
 AFL_CC = afl-clang-fast++
-CFLAGS = -Wall -c -O3 -I$(INC_DIR) -I/usr/include/opencv4 -std=c++20 -Wextra -Werror=return-type
+CFLAGS = -Wall -c -O3 -I$(INC_DIR) -std=c++20 -Wextra -Werror=return-type
 DEBUG_CFLAGS = $(CFLAGS) -g -O0
-FUZZ_CFLAGS = -g -fsanitize=address,undefined -I$(INC_DIR) -I/usr/include/opencv4 -std=c++20 -Wextra -Werror=return-type
+FUZZ_CFLAGS = -g -fsanitize=address,undefined -I$(INC_DIR) -std=c++20 -Wextra -Werror=return-type
 
 # List of Source Files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
