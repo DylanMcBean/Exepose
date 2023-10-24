@@ -231,6 +231,28 @@ typedef struct
     Elf64Addr sh_entsize;   // Entry size if section holds table
 } Elf64Shdr;
 
+// 32bit ELF symbol table entry
+typedef struct
+{
+    ElfWord st_name;        // Symbol name (string tbl index)
+    Elf32Addr st_value;     // Symbol value
+    ElfWord st_size;        // Symbol size
+    unsigned char st_info;  // Symbol type and binding
+    unsigned char st_other; // Symbol visibility
+    ElfHalf st_shndx;       // Section index
+} Elf32Sym;
+
+// 64bit ELF symbol table entry
+typedef struct
+{
+    ElfWord st_name;        // Symbol name (string tbl index)
+    unsigned char st_info;  // Symbol type and binding
+    unsigned char st_other; // Symbol visibility
+    ElfHalf st_shndx;       // Section index
+    Elf64Addr st_value;     // Symbol value
+    Elf64Addr st_size;      // Symbol size
+} Elf64Sym;
+
 class ElfHandler
 {
   public:
@@ -241,14 +263,17 @@ class ElfHandler
 
   private:
     // Private Data Members
+    uint64_t _fileSize;
     std::variant<Elf32Ehdr, Elf64Ehdr> _elfEhdr;
     std::vector<std::variant<Elf32Phdr, Elf64Phdr>> _elfPhdrs;
     std::vector<std::variant<Elf32Shdr, Elf64Shdr>> _elfShdrs;
+    std::vector<std::variant<Elf32Sym, Elf64Sym>> _elfSymtab;
     ElfType _elfType;
     ElfDataEncoding _elfDataEncoding;
     uint8_t _elfEvCurrent = 0;
     ElfOsABI _elfOsabi;
     std::map<uint64_t, std::string> _sectionHeaderNameMap;
+    std::map<uint64_t, std::string> _symbolTableMap;
 
     // Private Helper Methods
     void ReadFile(const std::string &fileName);
@@ -256,6 +281,7 @@ class ElfHandler
     template <typename T1, typename T2> void ReadElfProgramHeaders(std::ifstream &file);
     template <typename T1, typename T2> void ReadElfSectionHeaders(std::ifstream &file);
     template <typename T1, typename T2, typename T3> void CreateSectionHeaderNameMap(std::ifstream &file);
+    template <typename T1, typename T2, typename T3, typename T4> void ParseSymbolTable(std::ifstream &file);
     ElfOsABI MapToElfOsABI(uint16_t value);
 
     // Private Validation Methods
@@ -272,4 +298,5 @@ class ElfHandler
 
     // Private Methods
     void CreateSectionHeaderNameMap(std::ifstream &file);
+    void ParseSymbolTable(std::ifstream &file);
 };

@@ -6,7 +6,7 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
     {
-        Helper::LogError(1006, "Not enough arguments provided");
+        Helper::Log(1, Helper::LogLevel::Error, "No executable specified");
         printf("Usage: %s <executable>", argv[0]);
         std::exit(EXIT_FAILURE);
     }

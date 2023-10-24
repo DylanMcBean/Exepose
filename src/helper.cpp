@@ -2,47 +2,57 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 
-/**
- * Logs an error message to the standard error stream and exits the program with the given error code.
- * @param errorCode The error code to exit the program with.
- * @param errorMessage The error message to log. Can contain format specifiers.
- * @param ... Additional arguments to be substituted in the error message.
- */
-void Helper::LogError(int errorCode, const char *errorMessage, ...)
+std::runtime_error Helper::Log(uint64_t code, LogLevel level, const char *format, ...)
 {
     va_list args;
-    va_start(args, errorMessage);
-    vfprintf(stderr, errorMessage, args);
-    va_end(args);
-    exit(errorCode);
-}
+    va_start(args, format);
 
-/**
- * Logs an informational message to the standard output stream.
- *
- * @param infoMessage The message to log.
- * @param ...         Optional arguments to format the message with.
- */
-void Helper::LogInfo(const char *infoMessage, ...)
-{
-    va_list args;
-    va_start(args, infoMessage);
-    vfprintf(stdout, infoMessage, args);
-    va_end(args);
-}
+    // Pre-format the code and log level
+    const char* levelStr;
+    const char* colorCode;
+    FILE* stream = stdout;
 
-/**
- * Logs a warning message to the console.
- * @param warningMessage The warning message to log.
- * @param ... Additional arguments to format the warning message.
- */
-void Helper::LogWarning(const char *warningMessage, ...)
-{
-    va_list args;
-    va_start(args, warningMessage);
-    vfprintf(stdout, warningMessage, args);
+    switch (level)
+    {
+    case LogLevel::Debug:
+        levelStr = "Debug";
+        colorCode = "\033[36m";
+        break;
+    case LogLevel::Info:
+        levelStr = "Info";
+        colorCode = "\033[32m";
+        code <<= 16;
+        break;
+    case LogLevel::Warning:
+        levelStr = "Warning";
+        colorCode = "\033[33m";
+        code <<= 32;
+        break;
+    case LogLevel::Error:
+        levelStr = "Error";
+        colorCode = "\033[31m";
+        code <<= 48;
+        stream = stderr;
+        break;
+    default:
+        levelStr = "Unknown";
+        colorCode = "\033[0m";
+        code <<= 64;
+        break;
+    }
+
+    // Log level, code, and icon
+    fprintf(stream, "%s[%016lX] %s\033[0m: ", colorCode, code, levelStr);
+
+    // Log the actual message
+    vfprintf(stream, format, args);
+    fprintf(stream, "\n");
+
     va_end(args);
+
+    return std::runtime_error(levelStr);
 }
 
 /**

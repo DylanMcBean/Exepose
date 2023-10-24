@@ -63,7 +63,7 @@ $(DEBUG_OBJ_DIR)/%.s: $(DEBUG_OBJ_DIR)/%.o
 
 # Clean Target
 clean:
-	@rm -rf $(OBJ_DIR) $(BIN_DIR)/main $(DEBUG_OBJ_DIR) $(DEBUG_BIN_DIR)/main $(FUZZ_OBJ_DIR) $(FUZZ_BIN_DIR)/main $(TESTS_OUT_DIR)/*
+	@rm -rf $(OBJ_DIR) $(BIN_DIR)/main $(DEBUG_OBJ_DIR) $(DEBUG_BIN_DIR)/main $(FUZZ_OBJ_DIR) $(FUZZ_BIN_DIR)/main
 
 run:
 ifneq ($(wildcard $(BIN_DIR)/main),)
