@@ -648,6 +648,12 @@ void ElfHandler::ParseSymbolTable(std::ifstream &file)
     }
 
     file.seekg(symtabOffset);
+
+    if (symtabSize % sizeof(ElfSym) != 0)
+    {
+        throw Helper::Log(27, Helper::LogLevel::Error, "Invalid ELF symbol table size");
+    }
+
     std::vector<ElfSym> symtab(symtabSize / sizeof(ElfSym));
     file.read(reinterpret_cast<char *>(symtab.data()), symtabSize);
     if (file.gcount() != static_cast<std::streamsize>(symtabSize))
