@@ -598,6 +598,8 @@ void ElfHandler::ParseSymbolTable(std::ifstream &file)
     Helper::Log(15, Helper::LogLevel::Debug, "Parsing symbol table");
     int64_t shsymtabndx = -1;
     int64_t shstrtabndx = -1;
+    int64_t shdynsymndx = -1;
+    int64_t shdynstrndx = -1;
     for (auto const &[key, val] : _sectionHeaderNameMap)
     {
         if (val == ".symtab")
@@ -607,6 +609,14 @@ void ElfHandler::ParseSymbolTable(std::ifstream &file)
         else if (val == ".strtab")
         {
             shstrtabndx = key;
+        }
+        else if (val == ".dynsym")
+        {
+            shdynsymndx = key;
+        }
+        else if (val == ".dynstr")
+        {
+            shdynstrndx = key;
         }
     }
 

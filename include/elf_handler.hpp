@@ -268,12 +268,14 @@ class ElfHandler
     std::vector<std::variant<Elf32Phdr, Elf64Phdr>> _elfPhdrs;
     std::vector<std::variant<Elf32Shdr, Elf64Shdr>> _elfShdrs;
     std::vector<std::variant<Elf32Sym, Elf64Sym>> _elfSymtab;
+    std::vector<std::variant<Elf32Sym, Elf64Sym>> _elfDynamicSymtab;
     ElfType _elfType;
     ElfDataEncoding _elfDataEncoding;
     uint8_t _elfEvCurrent = 0;
     ElfOsABI _elfOsabi;
     std::map<uint64_t, std::string> _sectionHeaderNameMap;
     std::map<uint64_t, std::string> _symbolTableMap;
+    std::map<uint64_t, std::string> _dynamicSymbolTableMap;
 
     // Private Helper Methods
     void ReadFile(const std::string &fileName);

@@ -20,8 +20,7 @@ CC = clang++
 AFL_CC = afl-clang-fast++
 CFLAGS = -Wall -c -O3 -I$(INC_DIR) -std=c++20 -Wextra -Werror=return-type
 DEBUG_CFLAGS = $(CFLAGS) -g -O0
-FUZZ_CFLAGS = -g -fsanitize=address,undefined -I$(INC_DIR) -std=c++20 -Wextra -Werror=return-type
-
+FUZZ_CFLAGS = -g -fsanitize=address,undefined -I$(INC_DIR) -std=c++20 -Wextra -Werror=return-type -O3 -fno-omit-frame-pointer
 # List of Source Files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
 
@@ -89,7 +88,11 @@ fuzztest:
 ifneq ($(wildcard $(FUZZ_BIN_DIR)/main),)
 	@echo -e "\033[1;37;45mFuzz Mode\033[0m"
 	@echo
-	@afl-fuzz -D -i $(TESTS_IN_DIR) -o $(TESTS_OUT_DIR) $(FUZZ_BIN_DIR)/main @@
+	# Start the fuzzing in the background
+	@afl-fuzz -D -i $(TESTS_IN_DIR) -o $(TESTS_OUT_DIR) -M fuzzer -- $(FUZZ_BIN_DIR)/main @@ &
+	# Start the monitoring script in the background
+	@nohup python3 -u monitor_fuzzing.py --output-dir "$(TESTS_OUT_DIR)/fuzzer" > monitor.log 2>&1 &
+	@echo "Fuzzing and monitoring started in the background. Check monitor.log for output."
 else
 	@echo "No Fuzz Build built"
 	@echo "Try running 'make fuzz' and then run this command again"
