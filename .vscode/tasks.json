@@ -1,50 +1,34 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "make - debug",
-            "type": "shell",
-            "command": "make",
-            "args": [
-                "-C",
-                "./tools/",
-                "debug"
-            ],
-            "dependsOn": [
-                "make - clean"
-            ],
-            "group": "build"
-        },
-        {
-            "label": "make",
-            "type": "shell",
-            "command": "make",
-            "args": [
-                "-C",
-                "./tools/",
-                "all"
-            ],
-            "dependsOn": [
-                "make - clean"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
-        },
-        {
-            "label": "make - clean",
-            "type": "shell",
-            "command": "make",
-            "args": [
-                "-C",
-                "./tools/",
-                "clean"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "make - debug",
+      "type": "shell",
+      "command": "make",
+      "args": ["-C", "./tools/", "debug"],
+      "dependsOn": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "make - all",
+      "type": "shell",
+      "command": "make",
+      "args": ["-C", "./tools/", "all"],
+      "dependsOn": [],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "make - clean",
+      "type": "shell",
+      "command": "make",
+      "args": ["-C", "./tools/", "clean"],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
 }

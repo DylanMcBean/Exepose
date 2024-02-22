@@ -483,17 +483,17 @@ template <typename ElfShdrType, typename ElfEhdr, typename ElfShdr>
 void ElfHandler::CreateSectionHeaderNameMap(std::ifstream &file)
 {
     Helper::Log(14, Helper::LogLevel::Debug, "Creating section header name map");
-    uint64_t shstrndx = std::get<ElfEhdr>(_elfEhdr).e_shstrndx;
+    uint64_t shstrndx = std::get<ElfEhdr>(_elfEhdr).e_shstrndx; // section header string table index
 
     if (shstrndx >= _elfShdrs.size())
     {
         throw Helper::Log(15, Helper::LogLevel::Error, "Invalid ELF section header string table index");
     }
 
-    ElfShdr shstrtab_hdr = std::get<ElfShdr>(_elfShdrs[shstrndx]);
+    ElfShdr shstrtab_hdr = std::get<ElfShdr>(_elfShdrs[shstrndx]); // section header string table header
 
-    uint64_t shstrtabOffset = shstrtab_hdr.sh_offset;
-    uint64_t shstrtabSize = shstrtab_hdr.sh_size;
+    uint64_t shstrtabOffset = shstrtab_hdr.sh_offset; // section header string table offset
+    uint64_t shstrtabSize = shstrtab_hdr.sh_size;    // section header string table size
 
     file.seekg(shstrtabOffset);
 
@@ -596,10 +596,10 @@ template <typename ElfShdrType, typename ElfEhdr, typename ElfShdr, typename Elf
 void ElfHandler::ParseSymbolTable(std::ifstream &file)
 {
     Helper::Log(15, Helper::LogLevel::Debug, "Parsing symbol table");
-    int64_t shsymtabndx = -1;
-    int64_t shstrtabndx = -1;
-    int64_t shdynsymndx = -1;
-    int64_t shdynstrndx = -1;
+    int64_t shsymtabndx = -1; // symbol table index
+    int64_t shstrtabndx = -1; // string table index
+    int64_t shdynsymndx = -1; // dynamic symbol table index
+    int64_t shdynstrndx = -1; // dynamic string table index
     for (auto const &[key, val] : _sectionHeaderNameMap)
     {
         if (val == ".symtab")

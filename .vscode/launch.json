@@ -6,11 +6,11 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/bin/release/main",
-      "args": [],
+      "args": ["/tests/in/libqsvg.so"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
-      "externalConsole": false,
+      "externalConsole": true,
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
       "setupCommands": [
@@ -20,18 +20,18 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "make"
+      "preLaunchTask": "make - all"
     },
     {
       "name": "(gdb) Launch - Debug",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/bin/debug/main",
-      "args": [],
+      "args": ["./tests/in/chello"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
-      "externalConsole": false,
+      "externalConsole": true,
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
       "setupCommands": [
@@ -42,25 +42,6 @@
         }
       ],
       "preLaunchTask": "make - debug"
-    },
-    {
-      "name": "C/C++ Runner: Debug Session",
-      "type": "cppdbg",
-      "request": "launch",
-      "args": [],
-      "stopAtEntry": false,
-      "externalConsole": false,
-      "cwd": ".",
-      "program": "build/Debug/outDebug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
     }
   ]
 }
