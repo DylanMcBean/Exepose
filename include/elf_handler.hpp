@@ -283,7 +283,7 @@ class ElfHandler
     template <typename T1, typename T2> void ReadElfProgramHeaders(std::ifstream &file);
     template <typename T1, typename T2> void ReadElfSectionHeaders(std::ifstream &file);
     template <typename T1, typename T2, typename T3> void CreateSectionHeaderNameMap(std::ifstream &file);
-    template <typename T1, typename T2, typename T3, typename T4> void ParseSymbolTable(std::ifstream &file);
+    template <typename T1, typename T2> void ParseTables(std::ifstream &file);
     ElfOsABI MapToElfOsABI(uint16_t value);
 
     // Private Validation Methods
@@ -300,5 +300,5 @@ class ElfHandler
 
     // Private Methods
     void CreateSectionHeaderNameMap(std::ifstream &file);
-    void ParseSymbolTable(std::ifstream &file);
+    void ParseTables(std::ifstream &file);
 };

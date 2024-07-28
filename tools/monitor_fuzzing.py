@@ -6,17 +6,36 @@ import subprocess
 import sched
 import time
 from pathlib import Path
+import requests
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 
+load_dotenv()
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+def send_telegram_message(message, token, chat_id):
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': message
+    }
+    response = requests.post(url, data=payload)
+    return response.json()
+
 class FuzzerMonitor:
-    def __init__(self, output_dir, fuzzer_stats, max_time_without_finds, check_interval):
+    def __init__(self, output_dir, fuzzer_stats, max_time_without_finds, check_interval, telegram_bot_token, telegram_chat_id):
         self.output_dir = Path(output_dir)
         self.fuzzer_stats_file = fuzzer_stats
         self.max_time_without_finds = max_time_without_finds
         self.scheduler = sched.scheduler(time.time, time.sleep)
         self.check_interval = check_interval
         self.last_fuzzer_data = {}
+        self.start_time = None
+        self.telegram_token = telegram_bot_token
+        self.chat_id = telegram_chat_id
 
     def read_fuzzer_file(self):
         """Efficiently reads the fuzzer stats file."""
@@ -59,32 +78,55 @@ class FuzzerMonitor:
 
         if fuzzer_data is not None:
             time_wo_finds = int(fuzzer_data.get("time_wo_finds", 0))
+            
+            curr_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+
+            cycles = f"{int(fuzzer_data.get('cycles_done', 0)):,}" if 'cycles_done' in fuzzer_data else 'N/A'
+            corpus = f"{int(fuzzer_data.get('corpus_count', 0)):,}" if 'corpus_count' in fuzzer_data else 'N/A'
+            crashes = f"{int(fuzzer_data.get('saved_crashes', 0)):,}" if 'saved_crashes' in fuzzer_data else 'N/A'
+            hangs = f"{int(fuzzer_data.get('saved_hangs', 0)):,}" if 'saved_hangs' in fuzzer_data else 'N/A'
+            execs = f"{int(fuzzer_data.get('execs_done', 0)):,}" if 'execs_done' in fuzzer_data else 'N/A'
+            edges = f"{int(fuzzer_data.get('edges_found', 0)):,}" if 'edges_found' in fuzzer_data else 'N/A'
+            total_edges = f"{int(fuzzer_data.get('total_edges', 0)):,}" if 'total_edges' in fuzzer_data else 'N/A'
+
             if time_wo_finds > self.max_time_without_finds:
                 logging.info(f"Time since last new path: {time_wo_finds} seconds. No new paths found. Exiting.")
                 self.stop_fuzzer()
+                update_message = (
+                    f"Final Update:\n"
+                    f"Cycles: {cycles}, Corpus: {corpus}\n"
+                    f"Crashes: {crashes}, Hangs: {hangs}\n"
+                    f"Execs: {execs}, Edges: {edges}, Total: {total_edges}\n"
+                )
+                send_telegram_message(update_message, self.telegram_token, self.chat_id)
                 return
 
-            last_find = fuzzer_data.get("last_find", 0)
-            curr_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-            last_found = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(last_find)) if last_find else 'N/A'
+            if self.last_fuzzer_data and (fuzzer_data.get("last_find", 0) != self.last_fuzzer_data.get("last_find", 0) or fuzzer_data.get("corpus_count", 0) != self.last_fuzzer_data.get("corpus_count", 0) or fuzzer_data.get("saved_crashes", 0) != self.last_fuzzer_data.get("saved_crashes", 0) or fuzzer_data.get("edges_found", 0) != self.last_fuzzer_data.get("edges_found", 0) or fuzzer_data.get("total_edges", 0) != self.last_fuzzer_data.get("total_edges", 0)):
+                logging.info(f"| {curr_time:<20} | {cycles:<13} | {corpus:<13} | {crashes:<13} | {hangs:<11} | {execs:<13} | {edges:<11} | {total_edges:<13} |")
+            elif self.last_fuzzer_data.get("last_find") is None:
+                logging.info(f"| {'Current Time':<20} | {'Cycles Count':<13} | {'Corpus Count':<13} | {'Saved Crashes':<13} | {'Saved Hangs':<11} | {'Execs Done':<13} | {'Edges Found':<11} | {'Total Edges':<13} |")
+                logging.info(f"| {curr_time:<20} | {cycles:<13} | {corpus:<13} | {crashes:<13} | {hangs:<11} | {execs:<13} | {edges:<11} | {total_edges:<13} |")
 
-            corpus = f"{int(fuzzer_data.get('corpus_count', 0)):,}" if 'corpus_count' in fuzzer_data else 'N/A'
-            crashes = f"{int(fuzzer_data.get('unique_crashes', 0)):,}" if 'unique_crashes' in fuzzer_data else 'N/A'
-            hangs = f"{int(fuzzer_data.get('unique_hangs', 0)):,}" if 'unique_hangs' in fuzzer_data else 'N/A'
-            execs = f"{int(fuzzer_data.get('execs_done', 0)):,}" if 'execs_done' in fuzzer_data else 'N/A'
-            if self.last_fuzzer_data and last_find != self.last_fuzzer_data.get("last_find"):
-                logging.info(f"| {curr_time:<20} | {last_found:<20} | {corpus:<13} | {crashes:<13} | {hangs:<11} | {execs:<13} |")
-            elif self.last_fuzzer_data.get("last_find") == None:
-                logging.info(f"| {'Current Time':<20} | {'Last Find':<20} | {'Corpus Count':<13} | {'Saved Crashes':<13} | {'Saved Hangs':<11} | {'Execs Done':<13} |")
-                logging.info(f"| {curr_time:<20} | {last_found:<20} | {corpus:<13} | {crashes:<13} | {hangs:<11} | {execs:<13} |")
+            if self.last_fuzzer_data and (fuzzer_data.get('saved_crashes', 0) != self.last_fuzzer_data.get('saved_crashes', 0)):
+                update_message = (
+                    f"Update:\n"
+                    f"Cycles: {cycles}, Corpus: {corpus}\n"
+                    f"Crashes: {crashes}, Hangs: {hangs}\n"
+                    f"Execs: {execs}, Edges: {edges}, Total: {total_edges}\n"
+                )
+                send_telegram_message(update_message, self.telegram_token, self.chat_id)
         else:
             logging.debug("Fuzzer stats file not found or unreadable.")
+            send_telegram_message("Could not find stats file, stopping fuzzing", self.telegram_token, self.chat_id)
+            exit()
 
         self.last_fuzzer_data = fuzzer_data
         self.scheduler.enter(self.check_interval, 1, self.check_fuzzer_status)
 
     def run(self):
-        current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        send_telegram_message("Fuzzing started", self.telegram_token, self.chat_id)
+        self.start_time = time.localtime()
+        current_time = time.strftime('%Y-%m-%d %H:%M:%S', self.start_time)
         logging.info(f"Current Time: {current_time}, Output Dir: {self.output_dir}, Fuzzer Stats: {self.fuzzer_stats_file}, Max Time Without Finds: {self.max_time_without_finds}, Check Interval: {self.check_interval}")
         
         self.scheduler.enter(10, 1, self.check_fuzzer_status)
@@ -98,5 +140,5 @@ if __name__ == "__main__":
     parser.add_argument("--check-interval", type=int, default=60, help="Interval in seconds between checks on fuzzer status")
     args = parser.parse_args()
 
-    monitor = FuzzerMonitor(args.output_dir, args.fuzzer_stats, args.max_time_without_finds, args.check_interval)
+    monitor = FuzzerMonitor(args.output_dir, args.fuzzer_stats, args.max_time_without_finds, args.check_interval, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
     monitor.run()
